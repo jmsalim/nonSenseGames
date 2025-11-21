@@ -659,7 +659,7 @@ function drawEndScreen() { // renders end title and reset button
   textSize(min(width, height) * 0.025);
   fill(230);
   noStroke();
-  text("This Flux inspired installation was inspired by WarioWare and Monty Python's Complete Waste of Time games.\n\n" + "This absurdist minigame collection attempts to explore the meaninglessness of modern digital life through short, frantic, and some-what arbitrary tasks.\n\n" + "Games have multiple end states and attempt to provoke critical thought. \nThere is no score, no true failure, only progression through nonsense.", width / 2, height * 0.45);
+  text("This Flux inspired installation was inspired by WarioWare and Monty Python's Complete Waste of Time games.\n\n" + "A minigame collection that explores modern digital life through short, frantic, and some-what arbitrary tasks.\n\n" + "Games have multiple end states and attempt to provoke critical thought. \nThere is no score, no true failure, only progression through nonsense.", width / 2, height * 0.45);
   pop();
 
   // Button sizing & layout (responsive)
