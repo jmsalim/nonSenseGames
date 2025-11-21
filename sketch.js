@@ -7,7 +7,7 @@ const AVAILABLE_MINIS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 let currentMini = 1;             // default start
 let gameStartMs = 0;             // start time of current game
 let transitionStartMs = 0;       // start time of "NEXT!" transition
-const GAME_DURATION = 6000;      // 6 seconds per micro-game
+const GAME_DURATION = 8000;      // 6 seconds per micro-game
 const TRANSITION_DURATION = 2000; // “NEXT!” duration
 
 // Sequential toggle (set to true for fixed order; false for random)
