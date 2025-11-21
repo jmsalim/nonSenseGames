@@ -2,8 +2,8 @@
 */
 
 /* ============================= GLOBAL STATE =============================  */
-let gameMode = "game";           // "game" | "transition" | "menu" | "start"
-const AVAILABLE_MINIS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]; 
+let gameMode = "game";           // "game" | "transition" | "menu" | "start" | "end" <-- ADDED "end"
+const AVAILABLE_MINIS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]; 
 let currentMini = 1;             // default start
 let gameStartMs = 0;             // start time of current game
 let transitionStartMs = 0;       // start time of "NEXT!" transition
@@ -22,6 +22,9 @@ let menuHoverIndex = -1;        // hover index
 // Start screen config & UI
 let enableStartScreen = true;   // enable/disable the start screen
 let startBtn = { x: 0, y: 0, w: 0, h: 0, hover: false }; // start button rect
+
+// End screen button
+let endBtn = { x: 0, y: 0, w: 0, h: 0, hover: false }; // end button rect <-- ADDED
 
 // Configurable GitHub URL for minigame 11 (change to class repo)
 const GITHUB_URL = "https://github.com/"; // set to class Repo
@@ -135,7 +138,7 @@ function playMiniBg(miniId) {
   stopMiniBg(); // ensure no overlap
   const key = `bg_${miniId}`;           // bg_# lookup
   const s = snd[key];                   // sound handle
-  if (s && s.isLoaded && s.isLoaded() && !s.isPlaying()) { s.loop(); s.setVolume(0.45); currentBgMini = miniId; } 
+  if (s && s.isLoaded && s.isLoaded() && !s.isPlaying()) { s.loop(); s.setVolume(0.45); currentBgMini = miniId; } 
 } //
 
 function stopMiniBg() {
@@ -274,6 +277,12 @@ function draw() {
     return;                   // stop when in start screen
   } //
 
+  if (gameMode === "end") { // end screen branch <-- ADDED
+    drawEndScreen();        // render end screen
+    drawFooterRibbon();       // footer for consistency
+    return;                   // stop when in end screen
+  } //
+
   if (gameMode === "menu") {             // menu state
     strokeWeight(0); // <-- FIX: Reset strokeWeight before drawing the menu
     drawMenu();                          // draw selectable list
@@ -304,7 +313,15 @@ function draw() {
     strokeWeight(0); // <-- FIX: Reset strokeWeight before transition
     const tElapsed = millis() - transitionStartMs;   //
     drawTransitionFrame(tElapsed);                   //
-    if (tElapsed >= TRANSITION_DURATION) startNewGame(nextMiniId()); //
+    if (tElapsed >= TRANSITION_DURATION) {
+      // Check if this was the last minigame in sequential mode
+      const isLastMini = sequentialMode && currentMini === AVAILABLE_MINIS[AVAILABLE_MINIS.length - 1];
+      if (isLastMini) {
+        beginEndScreen(); // <-- START END SCREEN
+      } else {
+        startNewGame(nextMiniId()); // next mini
+      }
+    }
   }
 
   drawFooterRibbon(); // decorative footer
@@ -346,6 +363,15 @@ function beginTransition() {
   stopMiniBg();        // BG cuts immediately
   playNextSfx();       // single NEXT sound
 } //
+
+// NEW FUNCTION: Start the End Screen
+function beginEndScreen() {
+  gameMode = "end";
+  // Final state cleanup if needed
+  stopMiniBg();
+  if (snd.cloud_trimmer_loop && snd.cloud_trimmer_loop.isPlaying()) snd.cloud_trimmer_loop.stop();
+  if (snd.dog_hold && snd.dog_hold.isPlaying && snd.dog_hold.isPlaying()) snd.dog_hold.stop();
+}
 
 function randomMiniDifferentFrom(prev) {
   const pool = AVAILABLE_MINIS.filter(v => v !== prev); // avoid repeat
@@ -605,6 +631,43 @@ function drawStartScreen() { // renders title and start button
   // Keyboard hint
   push(); textSize(min(width, height) * 0.03); fill(230);
   text("Press Enter to start", width / 2, startBtn.y + startBtn.h + 40); pop(); //
+} //
+
+/* ==================== END SCREEN (NEW) ==================== */
+function drawEndScreen() { // renders end title and reset button
+  background(18, 22, 38); // deep blue (same as start)
+
+  // Title
+  push(); textAlign(CENTER, CENTER); textSize(min(width, height) * 0.07); fill(255, 230, 100); stroke(0); strokeWeight(3);
+  text("Thank You For Playing!", width / 2, height * 0.2); pop();
+
+  // Project Description
+  push();
+  textAlign(CENTER, CENTER);
+  textSize(min(width, height) * 0.025);
+  fill(230);
+  noStroke();
+  text("This Flux inspired installation was inspired by WarioWare and Monty Python's Complete Waste of Time games.\n\n" + "This absurdist minigame collection attempts to explore the meaninglessness of modern digital life through short, frantic, and some-what arbitrary tasks.\n\n" + "Games have multiple end states and attempt to provoke critical thought. \nThere is no score, no true failure, only progression through nonsense.", width / 2, height * 0.45);
+  pop();
+
+  // Button sizing & layout (responsive)
+  const bw = Math.min(360, width * 0.5);        // button width
+  const bh = Math.max(56, Math.min(80, height * 0.09)); // button height
+  endBtn.w = bw; endBtn.h = bh;             // store for hit test
+  endBtn.x = width / 2 - bw / 2;              // center X
+  endBtn.y = height * 0.75 - bh / 2;          // place below description
+
+  // Hover detection
+  endBtn.hover = mouseX >= endBtn.x && mouseX <= endBtn.x + endBtn.w &&
+                   mouseY >= endBtn.y && mouseY <= endBtn.y + endBtn.h; //
+
+  // Draw button
+  push();
+  noStroke();
+  fill(endBtn.hover ? color(255, 100, 100) : color(220, 60, 60)); // Reset button is red
+  rect(endBtn.x, endBtn.y, endBtn.w, endBtn.h, 14); //
+  fill(255); textSize(28); text("Start Over", endBtn.x + endBtn.w / 2, endBtn.y + endBtn.h / 2); //
+  pop();
 } //
 
 /* ==================== MINIGAME 1: POLLUTE THE CLOUD (4s-5s) ====================  */
@@ -1583,6 +1646,14 @@ function mousePressed() {
     return; // do not fall through
   } //
 
+  if (gameMode === "end") { // end screen click handling <-- ADDED
+    if (mouseX >= endBtn.x && mouseX <= endBtn.x + endBtn.w &&
+        mouseY >= endBtn.y && mouseY <= endBtn.y + endBtn.h) {
+      setup(); // restart the game by calling setup()
+    }
+    return; // do not fall through
+  }
+
   if (gameMode === "menu") {
     for (let i = 0; i < menuRects.length; i++) {
       const r = menuRects[i];
@@ -1699,7 +1770,7 @@ function mousePressed() {
 }
 
 function mouseReleased() {
-  if (gameMode === "menu") return; //
+  if (gameMode === "menu" || gameMode === "end") return; // <-- ADDED "end"
   if (gameMode !== "game") return;
 
   if (currentMini === 7) {
@@ -1721,6 +1792,14 @@ function keyPressed() {
     }
     return; // ignore other keys in start screen
   } //
+
+  if (gameMode === "end") { // Enter to restart from end screen <-- ADDED
+    if (keyCode === ENTER || keyCode === RETURN) {
+      setup(); // restart the game
+      return false; // prevent default
+    }
+    return;
+  }
 
   // TAB toggles menu
   if (keyCode === TAB) {
@@ -1823,7 +1902,7 @@ function drawMenu() {
 /* =============================== DECORATIVE ===============================  */
 function drawFooterRibbon() {
   push(); noStroke(); fill(0, 0, 0, 30); rect(0, height - 36, width, 36);
-  textSize(16); fill(255); text("ABSURDIST MICRO-GAMES • Press TAB for Menu • No score. No failure. Only nonsense.", width / 2, height - 18);
+  textSize(16); fill(255); text("ABSURDIST MICRO-GAMES • No score. No failure. Only nonsense.", width / 2, height - 18);
   pop();
 }
 
@@ -1868,3 +1947,4 @@ function drawExtraExpression(type, cx, cy, faceR) {
 // Press TAB for the menu. Change GITHUB_URL to point to your repository.
 // Additions for Start Screen, new mini 4, 14, 15, 16, & Monty leg/nails mechanics
 // Mini 11 (Repo It) replaced with Mini 11 (The Endless Loop).
+// END SCREEN ADDED after the last sequential minigame (16).
