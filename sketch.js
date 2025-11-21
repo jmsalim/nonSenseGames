@@ -45,7 +45,7 @@ const MINI_BG = { // map: miniId -> filename
   8:  'bg_spaghetti.m4a', // Spaghetti
   9:  'bg_form.wav',      // Bureaucratic Maze
   10: 'bg_monty.wav',     // Monty Python
-  12: 'bg_legal.wav'      // Legal Malware (held while pressing SPACE)
+  12: 'bg_legal.mp3'      // Legal Malware (held while pressing SPACE)
 }; // no BG for 2,4,5,7,11,13,14,15,16 per your files
 
 // Single NEXT sfx (only one per your request)
@@ -65,6 +65,8 @@ const SFX_FILES = {
   spaghetti_ok:       'spaghetti_ok.m4a',       // G correct
   spaghetti_wrong:    'spaghetti_wrong.mp3',    // wrong key
   bong_gavel:         'bong_gavel.wav',         // BONG!
+  nudge_bump:         'nudge_bump.mp3',
+  separate_whoosh:    'separate_whoosh.mp3',
   denied_form:        'denied_form.wav',        // DENIED
   sausage_click:      'sausage_click.wav',      // sausage add
   turtle_drop:        'turtle_drop.wav',        // (reserved)
@@ -142,19 +144,29 @@ function playMiniBg(miniId) {
 } //
 
 function stopMiniBg() {
+  // Stop the current BG if running
   if (currentBgMini != null) {
-    const key = `bg_${currentMini}`;  // bg_# lookup
+    const key = `bg_${currentBgMini}`;  // Use currentBgMini, not currentMini
     const s = snd[key];                 // sound handle
     if (s && s.isPlaying()) s.stop();   // stop if running
   }
   currentBgMini = null; // cleared when no BG running
+  
+  // FIX: Ensure Legal Malware audio (BG 12) is stopped, as it's controlled separately
+  const legalBg = snd['bg_12'];
+  if (legalBg && legalBg.isPlaying && legalBg.isPlaying()) {
+    legalBg.stop();
+  }
 } //
 
 function playNextSfx() {
   const s = snd.next_sfx; // NEXT! handle
-  if (s && s.isLoaded && s.isLoaded()) s.play(); // safe play
+  // FIX: Reduce volume to 50% (0.5)
+  if (s && s.isLoaded && s.isLoaded()) {
+    s.setVolume(0.1); 
+    s.play();
+  }
 } //
-
 /* ========================= MINIGAME STATE VARS =========================  */
 /* 1: Mow the Cloud */
 let mowSpots = [];                      // {x,y,r} patches
@@ -381,20 +393,20 @@ function randomMiniDifferentFrom(prev) {
 function getObjectiveText(mini) {
   if (mini === 1)  return "Practice your pollution."; //
   if (mini === 2)  return "Locate the noise.";                    //
-  if (mini === 3)  return "Stop AI before it becomes Intelligent."; //
-  if (mini === 4)  return "Click Motivation before it remembers it’s busy."; // NEW
-  if (mini === 5)  return "Give 'Grief' and 'Mayonnaise' some Space."; //
-  if (mini === 6)  return "Quickly deflate the ego."; //
+  if (mini === 3)  return "Stop AI from becoming Intelligent."; //
+  if (mini === 4)  return "Get your Motivation."; // NEW
+  if (mini === 5)  return "Give them Space."; //
+  if (mini === 6)  return "Deflate the ego."; //
   if (mini === 7)  return "Pet the Invisible Dog."; //
   if (mini === 8)  return "Only 'G' may pass-ta.";         //
-  if (mini === 9)  return "Fragile. Do not touch.";         //
+  if (mini === 9)  return "Do not touch it.";         //
   if (mini === 10) return "Smash the civilized."; //
-  if (mini === 11) return "BREAK THE LOOP before it’s too small.";// Endless Loop (NEW)
+  if (mini === 11) return "BREAK THE LOOP.";// Endless Loop (NEW)
   if (mini === 12) return "Accept the Terms before they accept you."; // Legal
   if (mini === 13) return "Stuff the sausage.";   // Sausage
-  if (mini === 14) return "Tick every box. Change nothing."; // Checklist
-  if (mini === 15) return "Connect the stars, not the meaning."; // Constellation
-  if (mini === 16) return "Help the loading bar feel essential."; // Essential bar
+  if (mini === 14) return ""; // Checklist
+  if (mini === 15) return ""; // Constellation
+  if (mini === 16) return ""; // Essential bar
   return ""; //
 } //
 
@@ -404,7 +416,7 @@ function getMiniName(mini) { // menu friendly names
   if (mini === 3)  return "The AI Face";        //
   if (mini === 4)  return "Tag Motivation";     // NEW
   if (mini === 5)  return "Space them";      //
-  if (mini === 6)  return "Deflate the Ego Balloon";     //
+  if (mini === 6)  return "Deflate the Ego";     //
   if (mini === 7)  return "Pet the Invisible Dog";       //
   if (mini === 8)  return "Sentient Spaghetti";          //
   if (mini === 9)  return "Bureaucratic Maze";           //
@@ -412,9 +424,9 @@ function getMiniName(mini) { // menu friendly names
   if (mini === 11) return "The Endless Loop";             // Endless Loop (NEW)
   if (mini === 12) return "Legal Malware Text";          //
   if (mini === 13) return "Bad Bad Sausage";           //
-  if (mini === 14) return "Checklist of Essentials";   // NEW checklist
-  if (mini === 15) return "Constellation of Doubt";    // NEW constellation
-  if (mini === 16) return "The Essential Loading Bar"; // NEW loading bar
+  if (mini === 14) return "Checklist";   // NEW checklist
+  if (mini === 15) return "Constellation";    // NEW constellation
+  if (mini === 16) return "The Loading Bar"; // NEW loading bar
   return `Minigame ${mini}`;                             //
 } //
 
@@ -796,7 +808,7 @@ function drawGlitchyFace(elapsed) {
   pop();
 
   push(); textSize(18); fill(255);
-  text("Freeze the AI Face in judgment.", width / 2, by - 24); pop();
+  text("", width / 2, by - 24); pop();
 }
 
 /* ================= MINIGAME 4: TAG THE FLEETING MOTIVATION (4s) ================ */
@@ -838,7 +850,6 @@ function drawMini4_TagMotivation(elapsed) { // NEW
   } else {
     textSize(26);
     stroke(255);
-    strokeWeight(4);
     fill(0, 255, 160);
     text("GOT IT", 0, -24);
   }
@@ -848,7 +859,6 @@ function drawMini4_TagMotivation(elapsed) { // NEW
   push();
   textSize(Math.min(width, height) * 0.04);
   stroke(255);
-  strokeWeight(3);
   fill(255);
   text("Motivation Catch-up.", width / 2, height * 0.12);
   pop();
@@ -967,7 +977,7 @@ function drawFormMaze(elapsed) {
     for (let s of stamps) { s.x += s.vx; s.y += s.vy; s.vy += 0.06; push(); translate(s.x, s.y); rotate(s.rot);
       noStroke(); fill(240, 40, 40); rect(-6, -4, 12, 8, 2); fill(60); rect(-2, 4, 4, 8, 1); pop(); s.rot += s.vr; }
     const blink = (frameCount % 20) < 14;
-    if (blink) { push(); textSize(min(width, height) * 0.12); stroke(0); strokeWeight(2); fill(255, 60, 60); text("DENIED", width / 2, height * 0.2); pop(); }
+    if (blink) { push(); textSize(min(width, height) * 0.12); stroke(0); strokeWeight(2); fill(255, 60, 60); text("You touched it.", width / 2, height * 0.2); pop(); }
   }
   drawStickPetitioner(mouseX, mouseY);
   if (!denied) {
@@ -1221,9 +1231,9 @@ function drawMini11_EndlessLoop(elapsed) { // NEW endless loop render
   // Button label
   textSize(min(currentSize * 0.35, 30));
   fill(0);
-  text("BREAK", loopBtnPos.x, loopBtnPos.y - 8);
+  text("", loopBtnPos.x, loopBtnPos.y - 8);
   textSize(min(currentSize * 0.25, 20));
-  text("LOOP", loopBtnPos.x, loopBtnPos.y + 16);
+  text("", loopBtnPos.x, loopBtnPos.y + 16);
   pop();
 
   // Instruction/status text
@@ -1275,6 +1285,7 @@ function drawLegalMalware(elapsed) {
       legalBg.stop();                                          // cut playback
     }
   } else {
+    // FIX: Ensure the loop stops immediately on key release
     if (legalBg && legalBg.isPlaying && legalBg.isPlaying()) {
       legalBg.setLoop(false);                                  // ensure looping disabled
       legalBg.stop();                                          // stop when space released
@@ -1733,7 +1744,7 @@ function mousePressed() {
         mouseY <= item.y + item.h
       ) {
         item.done = !item.done; // flip state
-        if (snd.bong_gavel && snd.bong_gavel.isLoaded && snd.bong_gavel.isLoaded()) snd.bong_gavel.play(); // soft UX “confirm”
+        if (snd.nudge_bump && snd.nudge_bump.isLoaded && snd.nudge_bump.isLoaded()) snd.nudge_bump.play(); // soft UX “confirm”
         break;
       }
     }
@@ -1848,12 +1859,12 @@ function enterMenu() {
 function drawMenu() {
   background(18, 22, 38);
   push(); textAlign(CENTER, CENTER); textSize(min(width, height) * 0.048); fill(255); stroke(0); strokeWeight(2);
-  text("Select A Micro-Game", width / 2, height * 0.18); pop();
+  text("Select A Micro-Game", width / 2, height * 0.08); pop();
 
   push(); textSize(min(width, height) * 0.025); fill(230); noStroke();
-  text("Click an option, or use ↑/↓ and Enter.  Press TAB to return.", width / 2, height * 0.26); pop();
+  text("Click an option, or use ↑/↓ and Enter.  Press TAB to return.", width / 2, height * 0.16); pop();
 
-  const listTop = height * 0.34, rowH = min(72, height * 0.08), padX = 40, itemW = min(width * 0.7, 720), x = (width - itemW) / 2;
+  const listTop = height * 0.23, rowH = min(60, height * 0.08), padX = 40, itemW = min(width * 0.5, 720), x = (width - itemW) / 3;
   menuRects = []; menuHoverIndex = -1;
 
   const my = mouseY;
@@ -1861,7 +1872,7 @@ function drawMenu() {
   // Two-column layout settings (keeps your existing 'x' as the left anchor).
   const COLS = 2;                           // number of columns to display
   const colGap = 24;                        // horizontal gap between columns
-  const margin = 10;                        // right-side margin so UI doesn't touch canvas edge
+  const margin = 200;                        // right-side margin so UI doesn't touch canvas edge
 
   // Compute the widest safe item width so both columns fit from 'x' to the right edge.
   const availableRight = (width - margin) - x;                                     // space from left anchor to right edge
